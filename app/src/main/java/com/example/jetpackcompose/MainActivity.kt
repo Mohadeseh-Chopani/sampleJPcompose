@@ -10,12 +10,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,6 +62,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,36 +81,81 @@ import com.example.jetpackcompose.ui.theme.JetpackComposeTheme
 import com.example.jetpackcompose.utils.Const
 import kotlinx.coroutines.launch
 
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // اگر نیاز به لبه به لبه (edgeToEdge) دارید:
-         enableEdgeToEdge()
-
+        enableEdgeToEdge() // اگر لبه به لبه نیاز است
         setContent {
             JetpackComposeTheme {
-                HomeScreen()
+                MainApp()
             }
         }
     }
 }
 
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun MainApp() {
+    // مقادیر مورد نیاز برای Drawer و SnackBar و ناوبری
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackBarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        AppDrawer(
+
+        // لایه‌ی Drawer:
+        ModalNavigationDrawer(
             drawerState = drawerState,
-            navController = navController
+            drawerContent = {
+                // محتوای کشو (منو)
+                ModalDrawerSheet {
+                    Text(
+                        text = "منوی اصلی",
+                        style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    Divider()
+
+                    // آيتم صفحه خانه
+                    NavigationDrawerItem(
+                        label = { Text(Const.HOME) },
+                        selected = currentRoute(navController) == Const.HOME,
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home Icon") },
+                        onClick = {
+                            navController.navigate(Const.HOME) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                    )
+
+                    // آيتم صفحه خرید
+                    NavigationDrawerItem(
+                        label = { Text(Const.BUY) },
+                        selected = currentRoute(navController) == Const.BUY,
+                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Buy Icon") },
+                        onClick = {
+                            navController.navigate(Const.BUY) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                    )
+                }
+            }
         ) {
+            // اینجا اسکافلد سطح بالا را می‌سازیم
             Scaffold(
-                modifier = Modifier.fillMaxSize(),
                 snackbarHost = {
                     SnackbarHost(hostState = snackBarHostState) { snackbarData ->
                         Snackbar(
@@ -116,188 +167,142 @@ fun HomeScreen() {
                         )
                     }
                 },
+                // برای داشتن تاپ‌بار مشترک در همه صفحات
                 topBar = {
-                    MyTopBar(
-                        onDrawerClick = {
-                            coroutineScope.launch {
-                                drawerState.open()
+                    // تشخیص بدهید الان در کدام مسیر هستیم تا مثلاً عنوان یا آیکون متفاوت نشان دهید
+                    val route = currentRoute(navController)
+
+                    if (route == Const.BUY) {
+                        // اگر در صفحه‌ی خرید هستیم، مثلاً یک تاپ‌بار با آیکون بازگشت نمایش بدهیم
+                        TopAppBar(
+                            title = { Text("صفحه خرید") },
+                            navigationIcon = {
+                                IconButton(onClick = {
+                                    navController.popBackStack()
+                                }) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back Icon")
+                                }
                             }
-                        }
-                    )
+                        )
+                    } else {
+                        // در غیر اینصورت (مثلاً صفحه خانه) تاپ‌بار با آیکون منو (برای باز کردن Drawer)
+                        CenterAlignedTopAppBar(
+                            title = {
+                                Text(
+                                    text = "صفحه اصلی",
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = {
+                                    coroutineScope.launch {
+                                        drawerState.open()
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Icon drawer", tint = Color.Black)
+                                }
+                            },
+                            modifier = Modifier.background(Color.Red)
+                        )
+                    }
                 }
             ) { innerPadding ->
+                // NavHost را داخل بدنه‌ی Scaffold قرار می‌دهیم
                 NavHost(
                     navController = navController,
                     startDestination = Const.HOME,
                     modifier = Modifier.padding(innerPadding)
                 ) {
-                    composable(Const.HOME) { InfoScreen(navController) }
-                    composable(Const.BUY) { BuyScreen(navController) }
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(20.dp)
-                ) {
-                    var textFieldState by remember { mutableStateOf("") }
-
-                    TextField(
-                        value = textFieldState,
-                        onValueChange = { textFieldState = it },
-                        label = { Text("نام کاربر") },
-                        shape = MaterialTheme.shapes.small,
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding()
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(onClick = {
-                        coroutineScope.launch {
-                            snackBarHostState.showSnackbar(
-                                message = "متن شما: $textFieldState",
-                                actionLabel = "باشه",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                    }) {
-                        Text("نشان دادن Snackbar")
+                    composable(Const.HOME) {
+                        // محتوای صفحه خانه
+                        HomeScreenContent(snackBarHostState)
+                    }
+                    composable(Const.BUY) {
+                        // محتوای صفحه خرید
+                        BuyScreenContent()
                     }
                 }
-
             }
         }
     }
 }
 
+/**
+ * فقط یک تابع کمکی برای تشخیص Route جاری
+ */
 @Composable
-fun AppDrawer(
-    drawerState: DrawerState,
-    navController: NavController,
-    content: @Composable () -> Unit
-) {
+fun currentRoute(navController: NavController): String? {
+    val entry = navController.currentBackStackEntryAsState().value
+    return entry?.destination?.route
+}
+
+/**
+ * محتوای صفحه‌ی خانه: همان TextField و دکمه‌ای که Snackbar نشان می‌دهد.
+ */
+@Composable
+fun HomeScreenContent(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
+    var textFieldValue by remember { mutableStateOf("") }
 
-    // برای تشخیص مسیر فعلی
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Text(
-                    text = "منوی اصلی",
-                    style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(16.dp)
-                )
-                Divider()
-                NavigationDrawerItem(
-                    label = { Text(Const.HOME) },
-                    selected = currentRoute == Const.HOME,
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home Icon") },
-                    onClick = {
-                        navController.navigate(Const.HOME) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                        coroutineScope.launch { drawerState.close() }
-                    }
-                )
-
-                NavigationDrawerItem(
-                    label = { Text(Const.BUY) },
-                    selected = currentRoute == Const.BUY,
-                    icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Buy Icon") },
-                    onClick = {
-                        navController.navigate(Const.BUY) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                        coroutineScope.launch { drawerState.close() }
-                    }
-                )
-            }
-        }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(5.dp)
     ) {
-        content()
-    }
-}
-
-@ExperimentalMaterial3Api
-@Composable
-fun MyTopBar(
-    onDrawerClick: () -> Unit
-) {
-    CenterAlignedTopAppBar(
-        modifier = Modifier.background(Color.Red),
-        title = {
-            Text(
-                text = "",
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onDrawerClick) {
-                Icon(Icons.Default.Menu, contentDescription = "Icon drawer", tint = Color.White)
-            }
-        }
-    )
-}
-
-
-@Composable
-fun InfoScreen(navController: NavController) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("صفحه اصلی (Home)", style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@ExperimentalMaterial3Api
-@Composable
-fun BuyScreen(navController: NavController) {
-    Scaffold(
-        topBar = {
-            // یا یک تاپ‌بار متفاوت
-            TopAppBar(
-                title = {
-                    Text("صفحه خرید")
-                },
-                navigationIcon = {
-                    // مثلاً آیکون بازگشت یا هر چیز دیگر
-                    IconButton(onClick = {
-                        // برگرد به صفحه قبل
-                        navController.popBackStack()
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back Icon")
-                    }
-                }
-            )
-        }
-    ) {
-        Box(
+        TextField(
+            value = textFieldValue,
+            onValueChange = { textFieldValue = it },
+            label = { Text("نام کاربر") },
+            shape = MaterialTheme.shapes.small,
+            singleLine = true,
             modifier = Modifier
-                .padding(it) // برای جلوگیری از افتادن زیر تاپ‌بار
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(20.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "متن شما: $textFieldValue",
+                    actionLabel = "باشه",
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }) {
+            Text("نشان دادن Snackbar")
+        }
+
+//        LazyRow(modifier = Modifier.padding(8.dp)
+//            .clipToBounds()) { items(20) {
+//            ImageCard(painterResource(R.drawable.ic_launcher_foreground), "title")
+//        } }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ImageCard(painterResource(R.drawable.ic_launcher_foreground), "")
+            items(100) { movie ->
+                ImageCard(painterResource(R.drawable.card_loading), "title")
+            }
         }
     }
+}
+
+/**
+ * محتوای صفحه‌ی خرید: یک صفحه‌ی متفاوت
+ */
+@Composable
+fun BuyScreenContent() {
+   ImageCard(painterResource(R.drawable.ic_launcher_foreground), "test Image")
 }
 
 @Composable
@@ -313,38 +318,40 @@ fun ImageCard(painter: Painter, title: String) {
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .offset(x = 10.dp, y = 10.dp)
+            .fillMaxSize()
+//            .offset(x = 5.dp, y = 5.dp)
+//            .padding(2.dp)
     )
     {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.3f)
+                .fillMaxWidth(0.9f)
                 .offset(x = 10.dp, y = 10.dp)
-                .height(170.dp),
-            border = BorderStroke(2.dp, color = Color.Magenta),
+                .height(160.dp)
+                .padding(0.dp,2.dp,0.dp,2.dp),
+            border = BorderStroke(1.dp, color = Color.DarkGray),
             shape = RoundedCornerShape(15.dp)
         ) {
             Image(
                 painter = painter,
                 contentDescription = title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp),
-                contentAlignment = Alignment.BottomCenter
+                contentAlignment = Alignment.BottomCenter,
             )
             {
-                Text("hifshhsfkh", style = TextStyle(color = Color.Black, fontSize = 14.sp))
+                Text("hifshhsfkh", style = TextStyle(color = Color.Black, fontSize = 14.sp),
+                    modifier = Modifier.align(Alignment.BottomCenter))
             }
         }
 
         Text(
-            "jcjgfffhgf", style = TextStyle(fontSize = 16.sp), modifier = Modifier
+            title, style = TextStyle(fontSize = 16.sp), modifier = Modifier
                 .offset(x = 150.dp, y = 60.dp)
         )
     }
@@ -355,9 +362,11 @@ fun ImageCard(painter: Painter, title: String) {
 @Composable
 fun GreetingPreview() {
     JetpackComposeTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
+
 //        Greeting("Android test")
 //        ImageCard(painterResource(R.drawable.ic_launcher_foreground), "this is a test")
-//        HomeScreen()
-        BuyScreen(navController = rememberNavController())
+//        BuyScreenContent()
+        HomeScreenContent(snackbarHostState)
     }
 }
