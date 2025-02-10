@@ -1,4 +1,4 @@
-package com.example.jetpackcompose
+package com.example.jetpackcompose.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Divider
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,7 +59,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,15 +67,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.jetpackcompose.R
 import com.example.jetpackcompose.ui.theme.JetpackComposeTheme
 import com.example.jetpackcompose.utils.Const
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -88,6 +88,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge() // اگر لبه به لبه نیاز است
         setContent {
             JetpackComposeTheme {
+                val mainViewModel: MainViewModel by viewModel()
                 MainApp()
             }
         }
@@ -97,19 +98,15 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp() {
-    // مقادیر مورد نیاز برای Drawer و SnackBar و ناوبری
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackBarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-
-        // لایه‌ی Drawer:
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                // محتوای کشو (منو)
                 ModalDrawerSheet {
                     Text(
                         text = "منوی اصلی",
@@ -118,7 +115,6 @@ fun MainApp() {
                     )
                     Divider()
 
-                    // آيتم صفحه خانه
                     NavigationDrawerItem(
                         label = { Text(Const.HOME) },
                         selected = currentRoute(navController) == Const.HOME,
@@ -135,7 +131,6 @@ fun MainApp() {
                         }
                     )
 
-                    // آيتم صفحه خرید
                     NavigationDrawerItem(
                         label = { Text(Const.BUY) },
                         selected = currentRoute(navController) == Const.BUY,
@@ -154,7 +149,6 @@ fun MainApp() {
                 }
             }
         ) {
-            // اینجا اسکافلد سطح بالا را می‌سازیم
             Scaffold(
                 snackbarHost = {
                     SnackbarHost(hostState = snackBarHostState) { snackbarData ->
@@ -167,13 +161,10 @@ fun MainApp() {
                         )
                     }
                 },
-                // برای داشتن تاپ‌بار مشترک در همه صفحات
                 topBar = {
-                    // تشخیص بدهید الان در کدام مسیر هستیم تا مثلاً عنوان یا آیکون متفاوت نشان دهید
                     val route = currentRoute(navController)
 
                     if (route == Const.BUY) {
-                        // اگر در صفحه‌ی خرید هستیم، مثلاً یک تاپ‌بار با آیکون بازگشت نمایش بدهیم
                         TopAppBar(
                             title = { Text("صفحه خرید") },
                             navigationIcon = {
@@ -185,7 +176,6 @@ fun MainApp() {
                             }
                         )
                     } else {
-                        // در غیر اینصورت (مثلاً صفحه خانه) تاپ‌بار با آیکون منو (برای باز کردن Drawer)
                         CenterAlignedTopAppBar(
                             title = {
                                 Text(
@@ -207,18 +197,15 @@ fun MainApp() {
                     }
                 }
             ) { innerPadding ->
-                // NavHost را داخل بدنه‌ی Scaffold قرار می‌دهیم
                 NavHost(
                     navController = navController,
                     startDestination = Const.HOME,
                     modifier = Modifier.padding(innerPadding)
                 ) {
                     composable(Const.HOME) {
-                        // محتوای صفحه خانه
                         HomeScreenContent(snackBarHostState)
                     }
                     composable(Const.BUY) {
-                        // محتوای صفحه خرید
                         BuyScreenContent()
                     }
                 }
@@ -227,18 +214,12 @@ fun MainApp() {
     }
 }
 
-/**
- * فقط یک تابع کمکی برای تشخیص Route جاری
- */
 @Composable
 fun currentRoute(navController: NavController): String? {
     val entry = navController.currentBackStackEntryAsState().value
     return entry?.destination?.route
 }
 
-/**
- * محتوای صفحه‌ی خانه: همان TextField و دکمه‌ای که Snackbar نشان می‌دهد.
- */
 @Composable
 fun HomeScreenContent(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
@@ -297,9 +278,6 @@ fun HomeScreenContent(snackbarHostState: SnackbarHostState) {
     }
 }
 
-/**
- * محتوای صفحه‌ی خرید: یک صفحه‌ی متفاوت
- */
 @Composable
 fun BuyScreenContent() {
    ImageCard(painterResource(R.drawable.ic_launcher_foreground), "test Image")
@@ -328,7 +306,7 @@ fun ImageCard(painter: Painter, title: String) {
                 .fillMaxWidth(0.9f)
                 .offset(x = 10.dp, y = 10.dp)
                 .height(160.dp)
-                .padding(0.dp,2.dp,0.dp,2.dp),
+                .padding(0.dp, 2.dp, 0.dp, 2.dp),
             border = BorderStroke(1.dp, color = Color.DarkGray),
             shape = RoundedCornerShape(15.dp)
         ) {
@@ -366,7 +344,7 @@ fun GreetingPreview() {
 
 //        Greeting("Android test")
 //        ImageCard(painterResource(R.drawable.ic_launcher_foreground), "this is a test")
-//        BuyScreenContent()
-        HomeScreenContent(snackbarHostState)
+        BuyScreenContent()
+//        HomeScreenContent(snackbarHostState)
     }
 }

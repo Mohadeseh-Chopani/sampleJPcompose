@@ -11,6 +11,21 @@ composeBom = "2025.01.01"
 runtimeAndroid = "1.7.7"
 navigationCompose = "2.8.6"
 navigationRuntimeKtx = "2.8.6"
+picasso = "2.8"
+retrofit = "2.11.0"
+gson = "2.11.0"
+converter-gson = "2.9.0"
+logging-interceptor = "4.9.0"
+lifecycle-livedata = "2.8.7"
+lifecycle-viewmodel = "2.8.7"
+play-services-location = "21.3.0"
+navigationFragmentKtx = "2.8.6"
+navigationUiKtx = "2.8.6"
+rxandroid = "3.0.2"
+rxjava = "3.1.9"
+retroift_rxjava = "3.0.0"
+koin_core = "3.4.0"
+koin_android = "3.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -30,6 +45,20 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-runtime-android = { group = "androidx.compose.runtime", name = "runtime-android", version.ref = "runtimeAndroid" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+picasso = { group = "com.squareup.picasso", name = "picasso", version.ref = "picasso" }
+retrofit = {group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit"}
+gson = {group = "com.google.code.gson", name = "gson", version.ref = "gson"}
+gson-converter = {group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converter-gson"}
+loggin-interceptor = {group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "logging-interceptor"}
+lifecycle-livedata = {group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle-livedata"}
+lifecycle-viewmodel = {group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle-viewmodel"}
+play-services-location = {group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location"}
+androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
+androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
+rx-android = { group = "io.reactivex.rxjava3", name = "rxandroid", version.ref = "rxandroid" }
+rx-java = { group = "io.reactivex.rxjava3", name = "rxjava", version.ref = "rxjava" }
+rxjava-retrofit-adapter = { group = "com.github.akarnokd", name = "rxjava3-retrofit-adapter", version.ref = "retroift_rxjava" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin_android" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
