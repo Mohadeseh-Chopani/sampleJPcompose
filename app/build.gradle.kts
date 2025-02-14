@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.rx.java)
     implementation(libs.rxjava.retrofit.adapter)
     implementation(libs.koin.android)
+    implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

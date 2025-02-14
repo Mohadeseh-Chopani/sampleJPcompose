@@ -1,5 +1,6 @@
 package com.example.jetpackcompose.network
 
+import com.example.jetpackcompose.data.ForecastWeatherData
 import com.example.jetpackcompose.data.WeatherData
 import io.reactivex.rxjava3.core.Single
 import retrofit2.http.GET
@@ -10,5 +11,6 @@ interface ApiService {
     suspend fun getWeatherData(
         @Query("token") token: String,
         @Query("city") city: String
-    ): Single<WeatherData>
+    ): ForecastWeatherData
+
 }

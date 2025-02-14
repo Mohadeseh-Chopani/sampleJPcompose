@@ -1,6 +1,10 @@
 package com.example.jetpackcompose.view
 
+import android.annotation.SuppressLint
+import android.net.Network
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,6 +32,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +53,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -75,21 +82,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.jetpackcompose.R
+import com.example.jetpackcompose.data.ForecastWeatherData
+import com.example.jetpackcompose.data.WeatherData
+import com.example.jetpackcompose.network.ApiServiceProvider
 import com.example.jetpackcompose.ui.theme.JetpackComposeTheme
 import com.example.jetpackcompose.utils.Const
+import com.example.jetpackcompose.utils.NetworkState
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.getViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.androidx.viewmodel.factory.KoinViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
+    private val mainViewModel: MainViewModel by viewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // اگر لبه به لبه نیاز است
         setContent {
             JetpackComposeTheme {
-                val mainViewModel: MainViewModel by viewModel()
-                MainApp()
+                MainApp(mainViewModel)
             }
         }
     }
@@ -97,7 +113,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainApp() {
+fun MainApp(mainViewModel: MainViewModel) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackBarHostState = remember { SnackbarHostState() }
@@ -203,7 +219,7 @@ fun MainApp() {
                     modifier = Modifier.padding(innerPadding)
                 ) {
                     composable(Const.HOME) {
-                        HomeScreenContent(snackBarHostState)
+                        HomeScreenContent(snackBarHostState, mainViewModel = mainViewModel)
                     }
                     composable(Const.BUY) {
                         BuyScreenContent()
@@ -220,10 +236,16 @@ fun currentRoute(navController: NavController): String? {
     return entry?.destination?.route
 }
 
+@SuppressLint("CoroutineCreationDuringComposition", "SuspiciousIndentation")
 @Composable
-fun HomeScreenContent(snackbarHostState: SnackbarHostState) {
+fun HomeScreenContent(snackbarHostState: SnackbarHostState, mainViewModel: MainViewModel) {
     val coroutineScope = rememberCoroutineScope()
     var textFieldValue by remember { mutableStateOf("") }
+    val weatherData by mainViewModel.weatherData.collectAsState()
+
+        LaunchedEffect(Unit) {
+            mainViewModel.loadData(ApiServiceProvider.API_KEY, "تهران")
+        }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -264,23 +286,44 @@ fun HomeScreenContent(snackbarHostState: SnackbarHostState) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(100) { movie ->
-                ImageCard(painterResource(R.drawable.card_loading), "title")
+        when (weatherData) {
+            is NetworkState.Loading -> {
+                CircularProgressIndicator(color = Color.DarkGray)
+            }
+            is NetworkState.Success -> {
+                val successState = (weatherData as NetworkState.Success<ForecastWeatherData>).data
+                val weatherList = successState.result.list.size ?: 0
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val data = successState.result.list
+                    items(weatherList) {
+                        val linkUrl: String = ApiServiceProvider.BASE_URL + "?token="+
+                                ApiServiceProvider.API_KEY + "&action=icon&id=" +
+                                data.get(it).weather.get(0).icon
+
+                        ImageCard(url = linkUrl, title = "hjhgjg")
+                        Log.d("MOX", "HomeScreenContent: "+data.get(0).weather.get(0).icon )
+                    }
+                }
+            }
+            is NetworkState.Error -> {
+//                Log.e("MOX", "HomeScreenContent: ${(weatherState as NetworkState.Error<ForecastWeatherData>).error.message}")
             }
         }
+
+
     }
 }
 
 @Composable
 fun BuyScreenContent() {
-   ImageCard(painterResource(R.drawable.ic_launcher_foreground), "test Image")
+//   ImageCard(painterResource(R.drawable.ic_launcher_foreground), "test Image")
 }
 
 @Composable
@@ -292,7 +335,7 @@ fun JetpackComposeTheme(content: @Composable () -> Unit) {
 
 
 @Composable
-fun ImageCard(painter: Painter, title: String) {
+fun ImageCard(url: String, title: String) {
 
     Box(
         modifier = Modifier
@@ -311,7 +354,7 @@ fun ImageCard(painter: Painter, title: String) {
             shape = RoundedCornerShape(15.dp)
         ) {
             Image(
-                painter = painter,
+                painter = rememberAsyncImagePainter(url),
                 contentDescription = title,
                 contentScale = ContentScale.Crop,
             )
